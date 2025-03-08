@@ -1,7 +1,22 @@
+import AppKit
 import Foundation
 import Cocoa
 
 public final class AppAccessibilityElement: AccessibilityElement, @unchecked Sendable {
+  public enum Notification: String {
+    case closed
+    case focusedWindowChanged
+    case windowCreated
+
+    public var rawValue: String {
+      switch self {
+      case .windowCreated:        kAXWindowCreatedNotification
+      case .focusedWindowChanged: kAXFocusedWindowChangedNotification
+      case .closed:               kAXUIElementDestroyedNotification
+      }
+    }
+  }
+
   public private(set) var reference: AXUIElement
   public let messagingTimeout: Float?
 
@@ -29,11 +44,11 @@ public final class AppAccessibilityElement: AccessibilityElement, @unchecked Sen
     }
   }
 
-  public func mainWindow() throws -> WindowAccessibilityElement {
+  public func mainWindow() throws -> WindowAccessibilityElement? {
     try getWindow(for: .mainWindow)
   }
 
-  public func focusedWindow() throws -> WindowAccessibilityElement {
+  public func focusedWindow() throws -> WindowAccessibilityElement? {
     try getWindow(for: .focusedWindow)
   }
 
@@ -77,9 +92,24 @@ public final class AppAccessibilityElement: AccessibilityElement, @unchecked Sen
     return pid
   }
 
+  public func observe(_ notification: Notification, element: AXUIElement, id: UUID, pointer: UnsafeMutableRawPointer? = nil, callback: AXObserverCallback) -> AccessibilityObserver? {
+    guard let pid, let observation = AccessibilityObserver.observe(
+      pid,
+      id: id,
+      element: element,
+      notification: notification,
+      pointer: pointer,
+      callback: callback
+    ) else {
+      return nil
+    }
+
+    return observation
+  }
+
   // MARK: Private methods
 
-  private func getWindow(for attribute: NSAccessibility.Attribute) throws -> WindowAccessibilityElement {
+  private func getWindow(for attribute: NSAccessibility.Attribute) throws -> WindowAccessibilityElement? {
     let element = try value(attribute, as: AXUIElement.self)
     return WindowAccessibilityElement(element, messagingTimeout: messagingTimeout)
   }

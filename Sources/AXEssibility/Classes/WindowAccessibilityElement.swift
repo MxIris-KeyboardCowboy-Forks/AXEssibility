@@ -55,7 +55,19 @@ public final class WindowAccessibilityElement: AccessibilityElement, @unchecked 
       AXUIElementSetAttributeValue(
         reference,
         kAXMinimizedAttribute as CFString,
-        newValue as CFTypeRef
+        packAXValue(newValue)
+      )
+    }
+  }
+
+  public var main: Bool? {
+    get { try? value(.main) }
+    set {
+      guard let newValue else { return  }
+      AXUIElementSetAttributeValue(
+        reference,
+        kAXMainAttribute as CFString,
+        packAXValue(newValue)
       )
     }
   }
@@ -64,7 +76,13 @@ public final class WindowAccessibilityElement: AccessibilityElement, @unchecked 
     get { try? value(kAXFullscreenAttribute)  }
   }
 
-  public init(_ reference: AXUIElement, messagingTimeout: Float? = nil) {
+  public init?(_ reference: AXUIElement, messagingTimeout: Float? = nil) {
+    var windowID: CGWindowID = 0
+    let result = _AXUIElementGetWindow(reference, &windowID)
+
+    guard result == .success, windowID != 0 else {
+      return nil
+    }
     self.reference = reference
     self.messagingTimeout = messagingTimeout
     setMessagingTimeoutIfNeeded(for: reference)
